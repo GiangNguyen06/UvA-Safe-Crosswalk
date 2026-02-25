@@ -88,4 +88,11 @@ UvA-Safe-Crosswalk/
 ```
 
 ---
-*Developed by Giang Nguyen for the University of Amsterdam.*
+## 👥 Team Members
+
+Developed for the University of Amsterdam by:
+* **Marieke Elzer** (13878808)
+* **Soufiane el Ouaâzizi** (11706732)
+* **Stijn Nagtzaam** (16036883)
+* **Giang Nguyen** (16265858)
+* **Dimitris Thomopoulos** (16017226)
