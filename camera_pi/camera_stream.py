@@ -3,19 +3,17 @@ import zmq
 import base64
 import time
 import os
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
 
-# Load hidden variables (finds .env in the root folder)
-load_dotenv(find_dotenv())
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=env_path)
 
 def start_stream():
-    # Use the port from .env, default to 5555 if not found
     port = os.getenv("ZMQ_PORT", "5555")
     
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
     
-    # We still use * because the Pi needs to bind to its own local interfaces
     socket.bind(f"tcp://*:{port}") 
     print(f"[INFO] ZeroMQ Server started. Broadcasting on port {port}...")
 
