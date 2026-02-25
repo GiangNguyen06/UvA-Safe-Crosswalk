@@ -1,0 +1,32 @@
+# --- Secrets & Config ---
+.env
+
+# --- AI Models (Large Files) ---
+
+*.pt
+*.onnx
+*.engine
+
+# --- Video & Data ---
+
+*.mp4
+*.avi
+*.mov
+*.mkv
+datasets/
+runs/
+
+# --- Python Junk ---
+__pycache__/
+*.pyc
+venv/
+.venv/
+.ipynb_checkpoints/
+
+# --- IDE Config ---
+.vscode/
+.idea/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
