@@ -30,3 +30,6 @@ venv/
 # --- OS Specific ---
 .DS_Store
 Thumbs.db
+
+processing/benchmark.py
+processing/test.py
