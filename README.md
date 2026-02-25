@@ -1,41 +1,42 @@
-# 🚸 UvA Safe Crosswalk - Real-Time AI Detection
-
-**University of Amsterdam (UvA) - Master's Project**
-*Course: SSCD*
+🚸 UvA Safe Crosswalk - Real-Time AI Detection
+ To be updated
 
 This project implements a real-time, distributed computer vision system designed to monitor crosswalk safety. It captures live video from a Raspberry Pi, transmits it over a local network using ZeroMQ, and processes the frames on a more powerful machine using a YOLO object detection model.
 
-## 🏗️ System Architecture
-
+🏗️ System Architecture
 The system is split into two main components to ensure high performance and low latency:
 
-1. **The Edge Node (Raspberry Pi 3):** Captures video via a USB camera, compresses the frames, and broadcasts them as raw bytes over the network using a ZeroMQ (`PUB`) socket.
-2. **The Processing Node (Windows PC):** Subscribes to the ZeroMQ (`SUB`) stream, decodes the frames, and runs a YOLO object detection model to identify pedestrians and crosswalk boundaries in real-time.
+The Edge Node (Raspberry Pi 3): Captures video via a USB camera, compresses the frames, and broadcasts them as raw bytes over the network using a ZeroMQ (PUB) socket.
 
-## ⚙️ Prerequisites
+The Processing Node (Windows PC): Subscribes to the ZeroMQ (SUB) stream, decodes the frames, and runs a YOLO object detection model to identify pedestrians and crosswalk boundaries in real-time.
 
-**Hardware:**
-* Raspberry Pi 3 (with a USB Web Camera attached)
-* Processing Computer (Windows/Linux/macOS)
-* Both devices must be on the same Local Area Network (LAN).
+⚙️ Prerequisites
+Hardware:
 
-**Software:**
-* Python 3.9+
-* Git
+Raspberry Pi 3 (with a USB Web Camera attached)
 
-## 🚀 Installation & Setup
+Processing Computer (Windows/Linux/macOS)
 
-### 1. Clone the Repository
-Clone this repository to **both** your Raspberry Pi and your processing computer:
-git clone [https://github.com/GiangNguyen06/UvA-Safe-Crosswalk.git](https://github.com/GiangNguyen06/UvA-Safe-Crosswalk.git)
+Both devices must be on the same Local Area Network (LAN).
+
+Software:
+
+Python 3.9+
+
+Git
+
+🚀 Installation & Setup
+1. Clone the Repository
+Clone this repository to both your Raspberry Pi and your processing computer:
+
+Bash
+git clone https://github.com/GiangNguyen06/UvA-Safe-Crosswalk.git
 cd UvA-Safe-Crosswalk
-
 2. Install Dependencies
 Install the required packages on both machines:
 
 Bash
 pip install opencv-python pyzmq python-dotenv ultralytics numpy
-
 3. Environment Variables (.env)
 For security and portability, network configurations are kept out of the source code.
 Create a .env file in the root directory of both machines.
