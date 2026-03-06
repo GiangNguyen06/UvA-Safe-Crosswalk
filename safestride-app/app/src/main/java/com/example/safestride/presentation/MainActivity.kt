@@ -32,20 +32,25 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SafeStrideApp(context: Context) {
-    // REMOVE the old "remember { mutableStateOf(...) }"
-    // ADD THIS: The UI now actively listens to the shared bridge!
+    // The UI now actively listens to the shared bridge!
     val currentStatus by SafeStrideState.currentStatus.collectAsState()
 
     val prefs = context.getSharedPreferences("SafeStridePrefs", Context.MODE_PRIVATE)
     var showOnboarding by remember { mutableStateOf(prefs.getBoolean("FIRST_RUN", true)) }
 
     fun updateService(status: String) {
-        // We removed the manual status update here, because clicking the button
-        // will now just tell the service to start, and the service will update the state.
         val intent = Intent(context, SafeStrideService::class.java).apply {
             putExtra("STATUS", status)
         }
         context.startForegroundService(intent)
+    }
+
+    // --- ADDED THIS BLOCK ---
+    // This tells Compose to run the code inside exactly once when the app opens.
+    // By passing "Stopped", it safely wakes up the service to start listening
+    // to UDP packets without immediately triggering any haptic vibrations.
+    LaunchedEffect(Unit) {
+        updateService("Stopped")
     }
 
     // --- SCREEN 1: THE ONBOARDING POP-UP ---
@@ -85,15 +90,15 @@ fun SafeStrideApp(context: Context) {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "SafeStride", color = Color.White)
+                Text(text = "SafeStride", color = Color.Green)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Status: $currentStatus", color = Color.White)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { updateService("Slow") }) { Text("S") }
-                    Button(onClick = { updateService("Medium") }) { Text("M") }
-                    Button(onClick = { updateService("Fast") }) { Text("F") }
+                    Button(onClick = { updateService("Slow") }) { Text("Low") }
+                    Button(onClick = { updateService("Medium") }) { Text("Med") }
+                    Button(onClick = { updateService("Fast") }) { Text("Hi") }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
