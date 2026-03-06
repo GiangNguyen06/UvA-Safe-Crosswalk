@@ -5,42 +5,79 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.*
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 
 class SafeStrideService : Service() {
     private lateinit var haptics: CrosswalkHaptics
+    // We use Coroutines to run the UDP server in the background
+    private val serviceJob = Job()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     override fun onCreate() {
         super.onCreate()
-        // Initialize haptics here in the background service!
         haptics = CrosswalkHaptics(this)
-
         createSilentNotificationChannel()
 
-        // Build the ongoing silent notification
         val notification = NotificationCompat.Builder(this, "safestride_channel")
             .setContentTitle("SafeStride Active")
-            .setContentText("Monitoring crosswalk status")
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Default system icon
-            .setOngoing(true) // Prevents the user from swiping it away
+            .setContentText("Monitoring UDP status")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setOngoing(true)
             .build()
 
-        // This tells Android: "Do not kill this app, it is doing important work!"
         startForeground(1, notification)
+
+        // START THE UDP SERVER
+        startUdpServer()
+    }
+
+    private fun startUdpServer() {
+        serviceScope.launch {
+            try {
+                // Listen on port 9000 (standard unprivileged port)
+                val socket = DatagramSocket(9000)
+                Log.d("SafeStrideUDP", "UDP Server listening on port 9000")
+
+                val buffer = ByteArray(1024)
+
+                while (isActive) {
+                    val packet = DatagramPacket(buffer, buffer.size)
+                    // The 'receive' command pauses here until a packet arrives
+                    socket.receive(packet)
+
+                    // Convert the incoming bytes to a String
+                    val status = String(packet.data, 0, packet.length).trim()
+                    Log.d("SafeStrideUDP", "Received UDP packet: $status")
+
+                    // Map the status string to our haptic pulses
+                    // We switch to the Main thread to update the haptics
+                    withContext(Dispatchers.Main) {
+                        when (status) {
+                            "Slow", "Medium", "Fast", "Stopped" -> haptics.updatePulse(status)
+                            else -> Log.d("SafeStrideUDP", "Unknown status received: $status")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SafeStrideUDP", "UDP Server Error", e)
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // When MainActivity sends a status update, change the haptic pulse
-        val status = intent?.getStringExtra("STATUS") ?: "Stopped"
-        haptics.updatePulse(status)
-
-        // If we get a "Stopped" command, we can kill the background service to save battery
-        if (status == "Stopped") {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-        }
-
+        // We no longer need the MainActivity to send commands.
+        // The service now reacts to UDP packets directly.
         return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cancel the coroutine job when the service is destroyed
+        serviceJob.cancel()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
