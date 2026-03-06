@@ -1,5 +1,6 @@
 package com.example.safestride.presentation
 
+import androidx.compose.runtime.collectAsState
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -31,15 +32,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SafeStrideApp(context: Context) {
-    var currentStatus by remember { mutableStateOf("Stopped") }
+    // REMOVE the old "remember { mutableStateOf(...) }"
+    // ADD THIS: The UI now actively listens to the shared bridge!
+    val currentStatus by SafeStrideState.currentStatus.collectAsState()
 
-    // Check device memory to see if this is the very first time opening the app
     val prefs = context.getSharedPreferences("SafeStridePrefs", Context.MODE_PRIVATE)
     var showOnboarding by remember { mutableStateOf(prefs.getBoolean("FIRST_RUN", true)) }
 
-    // Helper function to talk to our new Background Service
     fun updateService(status: String) {
-        currentStatus = status
+        // We removed the manual status update here, because clicking the button
+        // will now just tell the service to start, and the service will update the state.
         val intent = Intent(context, SafeStrideService::class.java).apply {
             putExtra("STATUS", status)
         }

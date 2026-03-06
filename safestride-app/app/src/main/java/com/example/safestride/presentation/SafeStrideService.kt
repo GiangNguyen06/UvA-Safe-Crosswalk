@@ -12,12 +12,16 @@ import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.InetSocketAddress
+import java.net.SocketAddress
 
 class SafeStrideService : Service() {
     private lateinit var haptics: CrosswalkHaptics
     // We use Coroutines to run the UDP server in the background
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+
+    private var udpSocket: DatagramSocket? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -44,32 +48,49 @@ class SafeStrideService : Service() {
     private fun startUdpServer() {
         serviceScope.launch {
             try {
-                // Listen on port 9000 (standard unprivileged port)
-                val socket = DatagramSocket(9000)
+                // Ensure any previous socket is closed
+                udpSocket?.close()
+
+                // Use SO_REUSEADDR to avoid "Address already in use" errors during restarts
+                val socket = DatagramSocket(null as SocketAddress?).apply {
+                    reuseAddress = true
+                    bind(InetSocketAddress(9000))
+                }
+                udpSocket = socket
+                
                 Log.d("SafeStrideUDP", "UDP Server listening on port 9000")
 
                 val buffer = ByteArray(1024)
 
                 while (isActive) {
                     val packet = DatagramPacket(buffer, buffer.size)
-                    // The 'receive' command pauses here until a packet arrives
-                    socket.receive(packet)
 
-                    // Convert the incoming bytes to a String
+                    // The 'receive' command pauses here until a packet arrives
+                    udpSocket?.receive(packet)
+
                     val status = String(packet.data, 0, packet.length).trim()
                     Log.d("SafeStrideUDP", "Received UDP packet: $status")
 
-                    // Map the status string to our haptic pulses
-                    // We switch to the Main thread to update the haptics
                     withContext(Dispatchers.Main) {
                         when (status) {
-                            "Slow", "Medium", "Fast", "Stopped" -> haptics.updatePulse(status)
+                            "Slow", "Medium", "Fast", "Stopped" -> {
+                                haptics.updatePulse(status)
+                                // ADD THIS LINE: Broadcast the new status to the UI!
+                                SafeStrideState.updateStatus(status)
+                            }
                             else -> Log.d("SafeStrideUDP", "Unknown status received: $status")
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SafeStrideUDP", "UDP Server Error", e)
+                if (isActive) {
+                    Log.e("SafeStrideUDP", "UDP Server Error", e)
+                } else {
+                    Log.d("SafeStrideUDP", "UDP Socket closed normally")
+                }
+            } finally {
+                udpSocket?.close()
+                udpSocket = null
             }
         }
     }
@@ -84,6 +105,9 @@ class SafeStrideService : Service() {
         super.onDestroy()
         // Cancel the coroutine job when the service is destroyed
         serviceJob.cancel()
+        // Forcefully close the socket port when the service is killed!
+        udpSocket?.close()
+        udpSocket = null
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
