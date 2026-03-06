@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">SafeStride</string>
+    <string name="fgs_justification">This service monitors real-time UDP packets from smart crosswalk sensors to provide haptic feedback to the user, ensuring safety during street crossing.</string>
+
+    <!-- <string name="fgs_justification">This service monitors real-time UDP packets from smart
+        crosswalk sensors to provide haptic feedback to the user, ensuring safety during street
+        crossing.
+    </string> -->
+</resources>
