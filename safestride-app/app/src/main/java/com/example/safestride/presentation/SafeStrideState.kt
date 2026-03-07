@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 // A Singleton object that acts as a bridge between the Service and the UI
 object SafeStrideState {
-    private val _currentStatus = MutableStateFlow("Stopped")
+    private val _currentStatus = MutableStateFlow("Waiting...")
     val currentStatus: StateFlow<String> = _currentStatus
 
     fun updateStatus(newStatus: String) {

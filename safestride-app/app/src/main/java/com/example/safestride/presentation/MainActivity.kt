@@ -1,6 +1,5 @@
 package com.example.safestride.presentation
 
-import androidx.compose.runtime.collectAsState
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -14,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit // Fixes the SharedPreferences warning!
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.Text
 import com.example.safestride.presentation.theme.SafeStrideTheme
@@ -23,7 +23,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SafeStrideTheme {
-                // We pass the "Context" (this) so the UI can start the background service
                 SafeStrideApp(this)
             }
         }
@@ -32,7 +31,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SafeStrideApp(context: Context) {
-    // The UI now actively listens to the shared bridge!
     val currentStatus by SafeStrideState.currentStatus.collectAsState()
 
     val prefs = context.getSharedPreferences("SafeStridePrefs", Context.MODE_PRIVATE)
@@ -45,12 +43,10 @@ fun SafeStrideApp(context: Context) {
         context.startForegroundService(intent)
     }
 
-    // --- ADDED THIS BLOCK ---
-    // This tells Compose to run the code inside exactly once when the app opens.
-    // By passing "Stopped", it safely wakes up the service to start listening
-    // to UDP packets without immediately triggering any haptic vibrations.
+    // --- THE REAL AUTO-START FIX ---
+    // We send "Init" instead of "Stopped", avoiding the manual kill-switch!
     LaunchedEffect(Unit) {
-        updateService("Stopped")
+        updateService("Init")
     }
 
     // --- SCREEN 1: THE ONBOARDING POP-UP ---
@@ -69,8 +65,7 @@ fun SafeStrideApp(context: Context) {
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = {
-                    // Save to memory so they never see this again
-                    prefs.edit().putBoolean("FIRST_RUN", false).apply()
+                    prefs.edit { putBoolean("FIRST_RUN", false) }
                     showOnboarding = false
                 }) { Text("Got it") }
             }
@@ -82,7 +77,8 @@ fun SafeStrideApp(context: Context) {
             "Slow" -> Color(0xFF4CAF50)
             "Medium" -> Color(0xFFFF9800)
             "Fast" -> Color(0xFFF44336)
-            else -> Color.DarkGray
+            "Stopped" -> Color.Gray
+            else -> Color.Black
         }
 
         Box(
@@ -103,7 +99,14 @@ fun SafeStrideApp(context: Context) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = { updateService("Stopped") }) { Text("Stop") }
+                // THE FIX: "Exit" button that kills the service AND closes the Activity
+                Button(onClick = {
+                    // 1. Send the kill command to the background service
+                    updateService("Stopped")
+
+                    // 2. Tell Android to completely destroy the UI
+                    (context as? ComponentActivity)?.finish()
+                }) { Text("Exit") }
             }
         }
     }

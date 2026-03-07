@@ -1,31 +1,35 @@
 import socket
 import time
 
-# ADB is listening on our Mac's localhost
-TARGET_IP = "127.0.0.1" 
+TARGET_IP = "192.168.178.16"
 TARGET_PORT = 9000
 
-# statuses we want to test
 status_cycle = ["Slow", "Medium", "Fast", "Stopped"]
-
-# Create a UDP socket
-# AF_INET = IPv4, SOCK_DGRAM = UDP
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 print(f"UDP Test Client starting. Blasting to {TARGET_IP}:{TARGET_PORT}")
 
+# We separate the "State" from the "Network Broadcast"
+current_status = "Stopped"
+last_state_change_time = time.time()
 i = 0
+
 try:
     while True:
-        status = status_cycle[i % len(status_cycle)]
-        print(f"Sending status: {status}")
-        
-        # Convert string to bytes and send
-        sock.sendto(status.encode(), (TARGET_IP, TARGET_PORT))
-        
-        i += 1
-        time.sleep(5) # Wait 5 seconds before next status
-        
+        # 1. Check if 5 seconds have passed to change the state
+        if time.time() - last_state_change_time > 5.0:
+            i += 1
+            current_status = status_cycle[i % len(status_cycle)]
+            last_state_change_time = time.time()
+            print(f"--- STATE CHANGED TO: {current_status} ---")
+
+        # 2. BLAST the current state constantly!
+        # The watch will pick this up almost instantly when opened
+        sock.sendto(current_status.encode(), (TARGET_IP, TARGET_PORT))
+
+        # Wait just 0.5 seconds before broadcasting again
+        time.sleep(0.5)
+
 except KeyboardInterrupt:
     print("\nClient stopped by user.")
 finally:

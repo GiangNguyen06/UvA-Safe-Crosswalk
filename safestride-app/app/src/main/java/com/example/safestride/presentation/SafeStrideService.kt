@@ -96,8 +96,24 @@ class SafeStrideService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // We no longer need the MainActivity to send commands.
-        // The service now reacts to UDP packets directly.
+        // Check if the UI sent a manual command
+        val status = intent?.getStringExtra("STATUS")
+
+        if (status == "Stopped") {
+            Log.d("SafeStrideUDP", "Manual stop triggered from UI")
+            haptics.updatePulse("Stopped")
+            SafeStrideState.updateStatus("Stopped")
+
+            // This formally removes the silent notification and kills the background process
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            stopSelf()
+        }
+
         return START_STICKY
     }
 
