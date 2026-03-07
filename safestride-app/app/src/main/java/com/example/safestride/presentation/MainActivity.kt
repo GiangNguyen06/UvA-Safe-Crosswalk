@@ -11,11 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.edit // Fixes the SharedPreferences warning!
+import androidx.core.content.edit
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
+import com.example.safestride.R
 import com.example.safestride.presentation.theme.SafeStrideTheme
 
 class MainActivity : ComponentActivity() {
@@ -43,20 +46,17 @@ fun SafeStrideApp(context: Context) {
         context.startForegroundService(intent)
     }
 
-    // --- THE REAL AUTO-START FIX ---
-    // We send "Init" instead of "Stopped", avoiding the manual kill-switch!
     LaunchedEffect(Unit) {
         updateService("Init")
     }
 
-    // --- SCREEN 1: THE ONBOARDING POP-UP ---
     if (showOnboarding) {
         Box(
             modifier = Modifier.fillMaxSize().background(Color.DarkGray).padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Pro Tip!", color = Color.Cyan)
+                Text(text = "Pro Tip:", color = Color.Green)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "For quick access, map your watch's double-press crown shortcut to SafeStride in Settings > Gestures.",
@@ -70,15 +70,22 @@ fun SafeStrideApp(context: Context) {
                 }) { Text("Got it") }
             }
         }
-    }
-    // --- SCREEN 2: THE MAIN UI ---
-    else {
+    } else {
+        // Updated colors based on new status text
         val backgroundColor = when (currentStatus) {
-            "Slow" -> Color(0xFF4CAF50)
-            "Medium" -> Color(0xFFFF9800)
-            "Fast" -> Color(0xFFF44336)
-            "Stopped" -> Color.Gray
+            "> 30M AWAY" -> Color(0xFFE4C200) // Darker Yellow for better contrast on wear OS
+            "15-30M AWAY" -> Color(0xFFFF9800) // Orange
+            "< 15M AWAY" -> Color(0xFFF44336) // Red
+            "STOPPED OR GONE" -> Color(0xFF4CAF50) // Green
+            "Waiting..." -> Color.Black
             else -> Color.Black
+        }
+
+        // Dynamic icon switching
+        val iconRes = when (currentStatus) {
+            "Waiting..." -> R.drawable.ic_loading
+            "STOPPED OR GONE" -> R.drawable.ic_walking
+            else -> R.drawable.ic_stop_sign
         }
 
         Box(
@@ -86,25 +93,29 @@ fun SafeStrideApp(context: Context) {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "SafeStride", color = Color.Green)
+
+                // The dynamic Icon replaces the title text
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = "Status Icon",
+                    modifier = Modifier.size(42.dp),
+                    tint = Color.White
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Status: $currentStatus", color = Color.White)
+
+                // Updated text string format
+                Text(
+                    text = "CAR IS $currentStatus",
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { updateService("Slow") }) { Text("Low") }
-                    Button(onClick = { updateService("Medium") }) { Text("Med") }
-                    Button(onClick = { updateService("Fast") }) { Text("Hi") }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // THE FIX: "Exit" button that kills the service AND closes the Activity
+                // Manual trigger buttons removed! Exit remains.
                 Button(onClick = {
-                    // 1. Send the kill command to the background service
                     updateService("Stopped")
-
-                    // 2. Tell Android to completely destroy the UI
                     (context as? ComponentActivity)?.finish()
                 }) { Text("Exit") }
             }

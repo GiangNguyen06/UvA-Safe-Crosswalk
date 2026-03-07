@@ -17,7 +17,6 @@ import java.net.SocketAddress
 
 class SafeStrideService : Service() {
     private lateinit var haptics: CrosswalkHaptics
-    // We use Coroutines to run the UDP server in the background
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
@@ -41,53 +40,49 @@ class SafeStrideService : Service() {
             startForeground(1, notification)
         }
 
-        // START THE UDP SERVER
         startUdpServer()
     }
 
     private fun startUdpServer() {
         serviceScope.launch {
             try {
-                // Ensure any previous socket is closed
                 udpSocket?.close()
-
-                // Use SO_REUSEADDR to avoid "Address already in use" errors during restarts
                 val socket = DatagramSocket(null as SocketAddress?).apply {
                     reuseAddress = true
                     bind(InetSocketAddress(9000))
                 }
                 udpSocket = socket
-                
-                Log.d("SafeStrideUDP", "UDP Server listening on port 9000")
 
+                Log.d("SafeStrideUDP", "UDP Server listening on port 9000")
                 val buffer = ByteArray(1024)
 
                 while (isActive) {
                     val packet = DatagramPacket(buffer, buffer.size)
-
-                    // The 'receive' command pauses here until a packet arrives
                     udpSocket?.receive(packet)
 
                     val status = String(packet.data, 0, packet.length).trim()
                     Log.d("SafeStrideUDP", "Received UDP packet: $status")
 
                     withContext(Dispatchers.Main) {
-                        when (status) {
-                            "Slow", "Medium", "Fast", "Stopped" -> {
-                                haptics.updatePulse(status)
-                                // ADD THIS LINE: Broadcast the new status to the UI!
-                                SafeStrideState.updateStatus(status)
-                            }
-                            else -> Log.d("SafeStrideUDP", "Unknown status received: $status")
+                        // We translate the new strings back to the old ones just for the haptics engine
+                        val hapticCommand = when (status) {
+                            "> 30M AWAY" -> "Slow"
+                            "15-30M AWAY" -> "Medium"
+                            "< 15M AWAY" -> "Fast"
+                            "STOPPED OR GONE" -> "Stopped"
+                            else -> null
+                        }
+
+                        if (hapticCommand != null) {
+                            haptics.updatePulse(hapticCommand)
+                            SafeStrideState.updateStatus(status) // Send the real text to the UI
+                        } else {
+                            Log.d("SafeStrideUDP", "Unknown status received: $status")
                         }
                     }
                 }
             } catch (e: Exception) {
-                if (isActive) {
-                    Log.e("SafeStrideUDP", "UDP Server Error", e)
-                } else {
-                    Log.d("SafeStrideUDP", "UDP Socket closed normally")
-                }
+                if (isActive) Log.e("SafeStrideUDP", "UDP Server Error", e)
             } finally {
                 udpSocket?.close()
                 udpSocket = null
@@ -96,15 +91,12 @@ class SafeStrideService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Check if the UI sent a manual command
         val status = intent?.getStringExtra("STATUS")
-
         if (status == "Stopped") {
             Log.d("SafeStrideUDP", "Manual stop triggered from UI")
             haptics.updatePulse("Stopped")
             SafeStrideState.updateStatus("Stopped")
 
-            // This formally removes the silent notification and kills the background process
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
             } else {
@@ -113,15 +105,12 @@ class SafeStrideService : Service() {
             }
             stopSelf()
         }
-
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Cancel the coroutine job when the service is destroyed
         serviceJob.cancel()
-        // Forcefully close the socket port when the service is killed!
         udpSocket?.close()
         udpSocket = null
     }
@@ -132,11 +121,8 @@ class SafeStrideService : Service() {
         val channel = NotificationChannel(
             "safestride_channel",
             "SafeStride Background Service",
-            NotificationManager.IMPORTANCE_LOW // IMPORTANCE_LOW prevents vibration/sound!
-        ).apply {
-            enableVibration(false)
-        }
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+            NotificationManager.IMPORTANCE_LOW
+        ).apply { enableVibration(false) }
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 }
