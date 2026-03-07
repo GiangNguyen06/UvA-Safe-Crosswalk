@@ -10,7 +10,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 print(f"UDP Test Client starting. Blasting to {TARGET_IP}:{TARGET_PORT}")
 
-current_status = "Waiting..."
+current_status = "Waiting for camera connection..."
 last_state_change_time = time.time()
 i = 0
 

@@ -20,6 +20,7 @@ import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
 import com.example.safestride.R
 import com.example.safestride.presentation.theme.SafeStrideTheme
+import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +57,7 @@ fun SafeStrideApp(context: Context) {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Pro Tip:", color = Color.Green)
+                Text(text = "Pro Tip!", color = Color.Cyan)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "For quick access, map your watch's double-press crown shortcut to SafeStride in Settings > Gestures.",
@@ -71,21 +72,29 @@ fun SafeStrideApp(context: Context) {
             }
         }
     } else {
-        // Updated colors based on new status text
+        // Updated to look for the new waiting text
         val backgroundColor = when (currentStatus) {
-            "> 30M AWAY" -> Color(0xFFE4C200) // Darker Yellow for better contrast on wear OS
-            "15-30M AWAY" -> Color(0xFFFF9800) // Orange
-            "< 15M AWAY" -> Color(0xFFF44336) // Red
-            "STOPPED OR GONE" -> Color(0xFF4CAF50) // Green
-            "Waiting..." -> Color.Black
+            "> 30M AWAY" -> Color(0xFFE4C200)
+            "15-30M AWAY" -> Color(0xFFFF9800)
+            "< 15M AWAY" -> Color(0xFFF44336)
+            "STOPPED OR GONE" -> Color(0xFF4CAF50)
+            "Waiting for camera connection..." -> Color.Black
             else -> Color.Black
         }
 
-        // Dynamic icon switching
+        // Updated to look for the new waiting text
         val iconRes = when (currentStatus) {
-            "Waiting..." -> R.drawable.ic_loading
+            "Waiting for camera connection..." -> R.drawable.ic_loading
             "STOPPED OR GONE" -> R.drawable.ic_walking
             else -> R.drawable.ic_stop_sign
+        }
+
+        // THE SMART TEXT LOGIC:
+        // If we are waiting, just show the waiting text. If not, add "CAR IS "
+        val displayText = if (currentStatus == "Waiting for camera connection...") {
+            currentStatus
+        } else {
+            "CAR IS $currentStatus"
         }
 
         Box(
@@ -94,7 +103,6 @@ fun SafeStrideApp(context: Context) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-                // The dynamic Icon replaces the title text
                 Icon(
                     painter = painterResource(id = iconRes),
                     contentDescription = "Status Icon",
@@ -104,16 +112,16 @@ fun SafeStrideApp(context: Context) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Updated text string format
                 Text(
-                    text = "CAR IS $currentStatus",
+                    text = displayText,
                     color = Color.White,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontSize = if (displayText.length > 20) 12.sp else 16.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Manual trigger buttons removed! Exit remains.
                 Button(onClick = {
                     updateService("Stopped")
                     (context as? ComponentActivity)?.finish()

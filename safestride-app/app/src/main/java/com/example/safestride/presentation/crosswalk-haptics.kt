@@ -50,9 +50,9 @@ class CrosswalkHaptics(context: Context) {
                 amplitudes = intArrayOf(0, 255, 0, 255, 0)
             }
             "Fast" -> {
-                // Continuous strong pulse: Wait 0ms, Vibrate continuously
-                timings = longArrayOf(0, 2000)
-                amplitudes = intArrayOf(0, 255)
+                // Fastest Pulse: Wait 0, Vib 200, Pause 200, Vib 200, Pause 200
+                timings = longArrayOf(0, 200, 50)
+                amplitudes = intArrayOf(0, 255, 0)
             }
             "Stopped" -> {
                 Log.d("CrosswalkApp", "Vibration stopped.")

@@ -92,10 +92,19 @@ class SafeStrideService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val status = intent?.getStringExtra("STATUS")
+
+        // 1. NEW LOGIC: When the app first opens, force the UI back to the waiting state
+        if (status == "Init") {
+            SafeStrideState.updateStatus("Waiting for camera connection...")
+        }
+
+        // 2. UPDATED LOGIC: When Exit is pressed, kill the haptics but reset the UI memory
         if (status == "Stopped") {
             Log.d("SafeStrideUDP", "Manual stop triggered from UI")
-            haptics.updatePulse("Stopped")
-            SafeStrideState.updateStatus("Stopped")
+            haptics.updatePulse("Stopped") // This tells the motor to stop vibrating
+
+            // THE FIX: Reset the UI state instead of saving "Stopped"
+            SafeStrideState.updateStatus("Waiting for camera connection...")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -105,6 +114,7 @@ class SafeStrideService : Service() {
             }
             stopSelf()
         }
+
         return START_STICKY
     }
 
