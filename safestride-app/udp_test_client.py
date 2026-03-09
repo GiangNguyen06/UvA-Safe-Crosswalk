@@ -1,7 +1,8 @@
 import socket
 import time
 
-TARGET_IP = "192.168.178.16"
+# TARGET_IP = "192.168.178.16"
+TARGET_IP = ("172.20.10.3")
 TARGET_PORT = 9000
 
 # Updated the exact phrases broadcasted over UDP

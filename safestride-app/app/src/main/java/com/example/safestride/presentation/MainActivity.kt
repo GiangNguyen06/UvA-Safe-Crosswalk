@@ -81,7 +81,7 @@ fun SafeStrideApp(context: Context) {
             "15-30M AWAY" -> Color(0xFFFF9800) // Orange
             "< 15M AWAY" -> Color(0xFFF44336) // Red
             "STOPPED OR GONE" -> Color(0xFF4CAF50) // Green
-            "Waiting for camera connection..." -> Color.Gray
+            "Waiting for camera connection..." -> Color.Black
             else -> Color.Black
         }
 
@@ -97,7 +97,7 @@ fun SafeStrideApp(context: Context) {
             "15-30M AWAY" -> Color(0xFF9E4F0B)
             "< 15M AWAY" -> Color(0xFF8B0303)
             "STOPPED OR GONE" -> Color(0xFF006520)
-            else -> Color.DarkGray
+            else -> Color.Black
         }
 
         val iconRes = when (currentStatus) {
