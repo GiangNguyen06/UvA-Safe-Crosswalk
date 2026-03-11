@@ -22,7 +22,6 @@ def start_bridge():
         send_to_emu_sock.sendto(data, ("127.0.0.1", EMULATOR_PORT))
         print(f"[*] BRIDGE: Relayed '{data.decode()}' to Emulator")
 
-# Simulate AI sending to Pi
 def start_sender():
     sender_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     status_cycle = ["> 30M AWAY", "15-30M AWAY", "< 15M AWAY", "STOPPED OR GONE"]
