@@ -1,5 +1,6 @@
 package com.example.safestride.presentation
 
+import androidx.compose.foundation.shape.CircleShape
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -12,15 +13,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
 import com.example.safestride.R
 import com.example.safestride.presentation.theme.SafeStrideTheme
-import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,25 +75,38 @@ fun SafeStrideApp(context: Context) {
             }
         }
     } else {
-        // Updated to look for the new waiting text
+        // App Background Color
         val backgroundColor = when (currentStatus) {
-            "> 30M AWAY" -> Color(0xFFE4C200)
-            "15-30M AWAY" -> Color(0xFFFF9800)
-            "< 15M AWAY" -> Color(0xFFF44336)
-            "STOPPED OR GONE" -> Color(0xFF4CAF50)
+            "> 30M AWAY" -> Color(0xFFFFFF00) // Pure bright yellow
+            "15-30M AWAY" -> Color(0xFFFF9800) // Orange
+            "< 15M AWAY" -> Color(0xFFF44336) // Red
+            "STOPPED OR GONE" -> Color(0xFF4CAF50) // Green
             "Waiting for camera connection..." -> Color.Black
             else -> Color.Black
         }
 
-        // Updated to look for the new waiting text
+        // Status Text & Icon Color
+        val contentColor = when (currentStatus) {
+            "> 30M AWAY", "15-30M AWAY", "< 15M AWAY" -> Color.Black
+            else -> Color.White // STOPPED OR GONE and Waiting default to white
+        }
+
+        // Exit Button Background Color
+        val exitButtonColor = when (currentStatus) {
+            "> 30M AWAY" -> Color(0xFF9C9C0C)
+            "15-30M AWAY" -> Color(0xFF9E4F0B)
+            "< 15M AWAY" -> Color(0xFF8B0303)
+            "STOPPED OR GONE" -> Color(0xFF006520)
+            else -> Color.Black
+        }
+
         val iconRes = when (currentStatus) {
             "Waiting for camera connection..." -> R.drawable.ic_loading
             "STOPPED OR GONE" -> R.drawable.ic_walking
+            "> 30M AWAY" -> R.drawable.ic_warning
             else -> R.drawable.ic_stop_sign
         }
 
-        // THE SMART TEXT LOGIC:
-        // If we are waiting, just show the waiting text. If not, add "CAR IS "
         val displayText = if (currentStatus == "Waiting for camera connection...") {
             currentStatus
         } else {
@@ -107,25 +123,47 @@ fun SafeStrideApp(context: Context) {
                     painter = painterResource(id = iconRes),
                     contentDescription = "Status Icon",
                     modifier = Modifier.size(42.dp),
-                    tint = Color.White
+                    tint = contentColor // Dynamic icon color
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = displayText,
-                    color = Color.White,
+                    color = contentColor, // Dynamic text color
                     textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold, // Bold text
                     fontSize = if (displayText.length > 20) 12.sp else 16.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(onClick = {
-                    updateService("Stopped")
-                    (context as? ComponentActivity)?.finish()
-                }) { Text("Exit") }
+                Button(
+                    onClick = {
+                        updateService("Stopped")
+                        (context as? ComponentActivity)?.finish()
+                    },
+                    modifier = Modifier.size(64.dp),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = exitButtonColor,
+                        contentColor = Color.White
+                    )
+                ) {
+                    // THE FIX: A Box that fills the circle and perfectly centers the text inside it
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Exit",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             }
         }
     }
