@@ -1,8 +1,11 @@
 import socket
 import time
 
-# TARGET_IP = "192.168.178.16"
-TARGET_IP = ("172.20.10.3")
+# TARGET_IP = "192.168.178.16" # Dimitris home ip
+# TARGET_IP = ("172.20.10.3")  # iphone hotspot
+#TARGET_IP = ("100.126.172.47") #tailscale ip
+#TARGET_IP = ("192.168.178.218")
+TARGET_IP = "127.0.0.1" # Localhost
 TARGET_PORT = 9000
 
 # Updated the exact phrases broadcasted over UDP
