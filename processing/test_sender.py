@@ -1,7 +1,6 @@
 import socket
 import time
 
-# --- CONFIGURATION ---
 PI_TAILSCALE_IP = "100.119.133.35"  #Raspberry Pi's Tailscale IP
 TARGET_PORT = 9000
 

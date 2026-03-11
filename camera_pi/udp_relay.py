@@ -5,7 +5,7 @@ LISTEN_PORT = 9000
 
 #Laptop's Tailscale IP 
 WATCH_IP = "100.126.172.47" 
-WATCH_PORT = 9000
+WATCH_PORT = 9001
 
 receiver_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 receiver_sock.bind((LISTEN_IP, LISTEN_PORT))
