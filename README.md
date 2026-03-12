@@ -4,7 +4,7 @@
 
 **TO BE UPDATED**
 
-<img align="right" src="gif.gif" alt="Project Demo" width="150" height="150" style="object-fit: cover; padding-left: 30px;">
+<img align="right" src="gif.gif" alt="Project Demo" width="150" height="150" style="object-fit: cover; padding-left: 30px; max-height: none !important;">
 
 This project implements a real-time, distributed computer vision system designed to monitor crosswalk safety. It captures live video from a Raspberry Pi, transmits it over a local network using ZeroMQ, and processes the frames on a more powerful machine using a YOLO object detection model.
 
