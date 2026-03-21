@@ -8,23 +8,34 @@ import socket
 # --- CONFIGURATION ---
 VIDEO_PATH = "videos/video3.mp4" 
 
-# Сustom crop dimensions
+# Custom crop dimensions
 ROI_Y1, ROI_Y2 = 116, 707
 ROI_X1, ROI_X2 = 1, 648
 
 # UDP Setup 
-
 PI_IP = "100.119.133.35" 
 PI_PORT = 9000
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# Zone Storage
+# Zone Storage - ORDERED FROM FURTHEST TO CLOSEST
 zones = {
-    "RED": {"points": [], "color": (0, 0, 255), "message": "< 15M AWAY"},
-    "YELLOW": {"points": [], "color": (0, 255, 255), "message": "15-30M AWAY"},
-    "GREEN": {"points": [], "color": (0, 255, 0), "message": "> 30M AWAY"}
+    "RED": {
+        "points": [], 
+        "color": (54, 67, 244),      # Match: 0xFFF44336 (Red)
+        "message": "< 15M AWAY"
+    },
+    "ORANGE": {
+        "points": [], 
+        "color": (0, 152, 255),     # Match: 0xFFFF9800 (Orange)
+        "message": "15-30M AWAY"
+    },
+    "YELLOW": {
+        "points": [], 
+        "color": (0, 255, 255),     # Match: 0xFFFFFF00 (Pure Bright Yellow)
+        "message": "> 30M AWAY"
+    }
 }
-current_drawing_zone = "RED"
+current_drawing_zone = "RED" # Start by drawing the furthest zone
 calibration_done = False
 
 def click_event(event, x, y, flags, param):
@@ -37,9 +48,9 @@ def click_event(event, x, y, flags, param):
             
             # Switch zones if 4 points are collected
             if len(zones[current_drawing_zone]["points"]) == 4:
-                if current_drawing_zone == "RED": current_drawing_zone = "YELLOW"
-                elif current_drawing_zone == "YELLOW": current_drawing_zone = "GREEN"
-                elif current_drawing_zone == "GREEN": 
+                if current_drawing_zone == "RED": current_drawing_zone = "ORANGE"
+                elif current_drawing_zone == "ORANGE": current_drawing_zone = "YELLOW"
+                elif current_drawing_zone == "YELLOW": 
                     current_drawing_zone = None
                     calibration_done = True
         
@@ -75,8 +86,8 @@ cv2.imshow("Calibrate Zones (Cropped)", cropped_first_frame)
 cv2.setMouseCallback("Calibrate Zones (Cropped)", click_event, {'cropped_frame': cropped_first_frame})
 
 print("--- CALIBRATION MODE ---")
-print("Click 4 times to draw the RED zone.")
-print("Then 4 times for YELLOW, then 4 for GREEN.")
+print("Click 4 times to draw the YELLOW zone (Furthest).")
+print("Then 4 times for ORANGE (Middle), then 4 for RED (Closest).")
 print("Press ENTER in the window when finished.")
 
 while True:
@@ -108,6 +119,7 @@ while True:
     crop = cv2.addWeighted(overlay, 0.2, crop, 0.8, 0) # 20% opacity
 
     closest_status = "STOPPED OR GONE"
+    status_color = (80, 175, 76)  # Green when clear (Match: 0xFF4CAF50)
     
     if len(results[0].boxes) > 0:
         for box in results[0].boxes:
@@ -120,22 +132,26 @@ while True:
             cv2.circle(crop, (car_bottom_x, car_bottom_y), 5, (255, 255, 255), -1)
             cv2.rectangle(crop, (x1, y1), (x2, y2), (255, 0, 255), 2)
 
-            # Check which zone the car is inside (Priority: Red -> Yellow -> Green)
+            # Check which zone the car is inside (Priority: Red -> Orange -> Yellow)
             if cv2.pointPolygonTest(zones["RED"]["points"], (car_bottom_x, car_bottom_y), False) >= 0:
                 closest_status = zones["RED"]["message"]
-            elif closest_status != zones["RED"]["message"] and cv2.pointPolygonTest(zones["YELLOW"]["points"], (car_bottom_x, car_bottom_y), False) >= 0:
+                status_color = zones["RED"]["color"]
+            elif closest_status != zones["RED"]["message"] and cv2.pointPolygonTest(zones["ORANGE"]["points"], (car_bottom_x, car_bottom_y), False) >= 0:
+                closest_status = zones["ORANGE"]["message"]
+                status_color = zones["ORANGE"]["color"]
+            elif closest_status not in [zones["RED"]["message"], zones["ORANGE"]["message"]] and cv2.pointPolygonTest(zones["YELLOW"]["points"], (car_bottom_x, car_bottom_y), False) >= 0:
                 closest_status = zones["YELLOW"]["message"]
-            elif closest_status not in [zones["RED"]["message"], zones["YELLOW"]["message"]] and cv2.pointPolygonTest(zones["GREEN"]["points"], (car_bottom_x, car_bottom_y), False) >= 0:
-                closest_status = zones["GREEN"]["message"]
-
+                status_color = zones["YELLOW"]["color"]
+                
+    # Send UDP to Pi
     try:
         sock.sendto(closest_status.encode(), (PI_IP, PI_PORT))
     except Exception as e:
         print(f"Network error: {e}")
     
-    
-    cv2.putText(crop, f"STATUS: {closest_status}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
-    cv2.putText(crop, f"STATUS: {closest_status}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    # Draw Status Text (Black outline, then colored fill)
+    cv2.putText(crop, f"STATUS: {closest_status}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+    cv2.putText(crop, f"STATUS: {closest_status}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
     
     cv2.imshow("SafeStride AI (Cropped)", crop)
     if cv2.waitKey(1) & 0xFF == ord('q'): 
