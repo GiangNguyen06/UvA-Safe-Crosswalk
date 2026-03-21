@@ -38,27 +38,31 @@ class CrosswalkHaptics(context: Context) {
         val timings: LongArray
         val amplitudes: IntArray
 
+        // MAP THE EXACT PYTHON STRINGS TO THE VIBRATION PATTERNS
         when (status) {
-            "Slow" -> {
-                // A very relaxed radar ping: Wait 0ms, Vibrate 200ms, Pause for 3000ms
+            "> 30M AWAY" -> {
+                // A very relaxed radar ping: Wait 0ms, Vibrate 200ms, Pause for 2000ms
                 timings = longArrayOf(0, 200, 2000)
                 amplitudes = intArrayOf(0, 255, 0)
             }
-            "Medium" -> {
+            "15-30M AWAY" -> {
                 // A distinct DOUBLE-TAP: Wait 0, Vib 200, Pause 200, Vib 200, Pause 800
                 timings = longArrayOf(0, 200, 200, 200, 800)
                 amplitudes = intArrayOf(0, 255, 0, 255, 0)
             }
-            "Fast" -> {
-                // Fastest Pulse: Wait 0, Vib 200, Pause 200, Vib 200, Pause 200
+            "< 15M AWAY" -> {
+                // Fastest Emergency Pulse: Wait 0, Vib 200, Pause 50ms
                 timings = longArrayOf(0, 200, 50)
                 amplitudes = intArrayOf(0, 255, 0)
             }
-            "Stopped" -> {
+            "STOPPED OR GONE", "Stopped" -> {
                 Log.d("CrosswalkApp", "Vibration stopped.")
                 return
             }
-            else -> return
+            else -> {
+                Log.d("CrosswalkApp", "Unknown status received by haptics: $status")
+                return
+            }
         }
 
         // The '0' tells the watch to repeat this pattern in an infinite loop

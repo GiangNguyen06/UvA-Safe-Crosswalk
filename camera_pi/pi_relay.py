@@ -1,16 +1,19 @@
 import socket
 
-WIN_IP = "100.126.172.47" 
-WIN_PORT = 9001
+LISTEN_IP = "0.0.0.0"  
+LISTEN_PORT = 9000
+
+# CHANGE THIS: Use the Watch's actual Wi-Fi IP
+WATCH_IP = "192.168.178.49" 
+WATCH_PORT = 9000 # The port your Android app is listening on
 
 receiver_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-receiver_sock.bind(("0.0.0.0", 9000))
-
+receiver_sock.bind((LISTEN_IP, LISTEN_PORT))
 sender_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-print(f"[PI] Relay Active! Listening on 9000 -> Bouncing back to Windows at {WIN_IP}:{WIN_PORT}")
+print(f"[RELAY] Forwarding traffic DIRECTLY to Watch at {WATCH_IP}:{WATCH_PORT}")
 
 while True:
     data, addr = receiver_sock.recvfrom(1024)
-    print(f"[PI] Caught '{data.decode()}' | Bouncing back to Windows...")
-    sender_sock.sendto(data, (WIN_IP, WIN_PORT))
+    print(f"[RELAY] Caught '{data.decode()}' | Sending to Physical Watch...")
+    sender_sock.sendto(data, (WATCH_IP, WATCH_PORT))

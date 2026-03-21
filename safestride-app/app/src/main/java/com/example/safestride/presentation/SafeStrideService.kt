@@ -1,5 +1,6 @@
 package com.example.safestride.presentation
 
+import android.content.Context
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -44,16 +45,27 @@ class SafeStrideService : Service() {
     }
 
     private fun startUdpServer() {
-        serviceScope.launch {
+        serviceScope.launch(Dispatchers.IO) {
+
+            // 1. WAKE UP THE WI-FI ANTENNA FOR BROADCASTS
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            val multicastLock = wifiManager.createMulticastLock("SafeStrideLock")
+            multicastLock.setReferenceCounted(true)
+            multicastLock.acquire()
+            Log.d("SafeStrideUDP", "Multicast Lock Acquired - Wi-Fi is awake!")
+
             try {
                 udpSocket?.close()
-                val socket = DatagramSocket(null as SocketAddress?).apply {
+
+                // 2. OPEN THE SOCKET AND ENABLE BROADCASTS
+                val socket = DatagramSocket(null).apply {
                     reuseAddress = true
-                    bind(InetSocketAddress(9000))
+                    broadcast = true // CRITICAL: Allows 255.255.255.255 messages
+                    bind(InetSocketAddress("0.0.0.0", 9000))
                 }
                 udpSocket = socket
 
-                Log.d("SafeStrideUDP", "UDP Server listening on port 9000")
+                Log.d("SafeStrideUDP", "UDP Server listening for Broadcasts on port 9000")
                 val buffer = ByteArray(1024)
 
                 while (isActive) {
@@ -64,28 +76,22 @@ class SafeStrideService : Service() {
                     Log.d("SafeStrideUDP", "Received UDP packet: $status")
 
                     withContext(Dispatchers.Main) {
-                        // We translate the new strings back to the old ones just for the haptics engine
-                        val hapticCommand = when (status) {
-                            "> 30M AWAY" -> "Slow"
-                            "15-30M AWAY" -> "Medium"
-                            "< 15M AWAY" -> "Fast"
-                            "STOPPED OR GONE" -> "Stopped"
-                            else -> null
-                        }
-
-                        if (hapticCommand != null) {
-                            haptics.updatePulse(hapticCommand)
-                            SafeStrideState.updateStatus(status) // Send the real text to the UI
-                        } else {
-                            Log.d("SafeStrideUDP", "Unknown status received: $status")
-                        }
+                        // Pass the exact string to the haptics and UI
+                        haptics.updatePulse(status)
+                        SafeStrideState.updateStatus(status)
                     }
                 }
             } catch (e: Exception) {
                 if (isActive) Log.e("SafeStrideUDP", "UDP Server Error", e)
             } finally {
+                // 3. CLEAN UP TO SAVE BATTERY
                 udpSocket?.close()
                 udpSocket = null
+
+                if (multicastLock.isHeld) {
+                    multicastLock.release()
+                    Log.d("SafeStrideUDP", "Multicast Lock Released")
+                }
             }
         }
     }

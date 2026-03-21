@@ -1,24 +1,30 @@
-##### TRAPEZOID ZONE CALIBRATION + YOLOv11n VEHICLE DETECTION #####
 import cv2
 import numpy as np
 import torch
 from ultralytics import YOLO
 import socket
+import zmq
+import base64
 
 # --- CONFIGURATION ---
-VIDEO_PATH = "videos/video3.mp4" 
+PI_IP = "100.119.133.35" # The Pi's Tailscale IP
 
-# Сustom crop dimensions
+# Custom crop dimensions (Match your specific camera angle)
 ROI_Y1, ROI_Y2 = 116, 707
 ROI_X1, ROI_X2 = 1, 648
 
-# UDP Setup 
+# 1. ZMQ Setup (Receiving Video from Pi on Port 5555)
+context = zmq.Context()
+footage_socket = context.socket(zmq.SUB)
+footage_socket.connect(f"tcp://{PI_IP}:5555")
+footage_socket.setsockopt_string(zmq.SUBSCRIBE, "") # Subscribe to all messages
+print(f"[*] Connected to Pi video stream at {PI_IP}:5555")
 
-PI_IP = "100.119.133.35" 
-PI_PORT = 9000
+# 2. UDP Setup (Sending Alerts back to Pi on Port 9001)
+PI_PORT_UDP = 9001
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# Zone Storage
+# --- ZONE CALIBRATION STATE ---
 zones = {
     "RED": {"points": [], "color": (0, 0, 255), "message": "< 15M AWAY"},
     "YELLOW": {"points": [], "color": (0, 255, 255), "message": "15-30M AWAY"},
@@ -61,12 +67,13 @@ def click_event(event, x, y, flags, param):
     cv2.putText(frame_display, instruction, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
     cv2.imshow("Calibrate Zones (Cropped)", frame_display)
 
-# Load Video & Start Calibration
-cap = cv2.VideoCapture(VIDEO_PATH)
-ret, first_frame = cap.read()
-if not ret:
-    print("Failed to load video!")
-    exit()
+# --- GRAB FIRST FRAME FOR CALIBRATION ---
+print("[*] Waiting for the first frame from the Pi...")
+# Wait until we receive the first ZMQ frame to draw the zones
+frame_data = footage_socket.recv() 
+img_b64decode = base64.b64decode(frame_data)
+img_array = np.frombuffer(img_b64decode, dtype=np.uint8)
+first_frame = cv2.imdecode(img_array, 1)
 
 # Apply the crop BEFORE calibration
 cropped_first_frame = first_frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2].copy()
@@ -77,31 +84,41 @@ cv2.setMouseCallback("Calibrate Zones (Cropped)", click_event, {'cropped_frame':
 print("--- CALIBRATION MODE ---")
 print("Click 4 times to draw the RED zone.")
 print("Then 4 times for YELLOW, then 4 for GREEN.")
-print("Press ENTER in the window when finished.")
+print("Press ENTER in the window when finished drawing zones.")
 
 while True:
     if cv2.waitKey(1) == 13 and calibration_done: 
         break
 cv2.destroyWindow("Calibrate Zones (Cropped)")
 
+# Convert points to numpy arrays for OpenCV processing
 for z in zones:
     zones[z]["points"] = np.array(zones[z]["points"], np.int32)
 
-# --- 2. AI DETECTION LOOP ---
-print("\n--- STARTING AI ---")
+# AI DETECTION LOOP 
+print("\n--- STARTING AI ---") 
 model = YOLO('yolo11n.pt')
 if torch.cuda.is_available(): model.to('cuda')
 target_classes = [2, 3, 5, 7] # Cars, Motorcycles, Buses, Trucks
 
 while True:
-    ret, frame = cap.read()
-    if not ret: break
+    # --- GET FRAME FROM ZMQ ---
+    try:
+        frame_data = footage_socket.recv(flags=zmq.NOBLOCK) # Non-blocking so it doesn't freeze
+        img_b64decode = base64.b64decode(frame_data)
+        img_array = np.frombuffer(img_b64decode, dtype=np.uint8)
+        frame = cv2.imdecode(img_array, 1)
+    except zmq.Again:
+        # No new frame arrived yet, just keep looping
+        continue
+
+    # ALWAYS crop the frame first!
     crop = frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2]
     
     # Run YOLO only on the cropped area
     results = model(crop, verbose=False, conf=0.4, classes=target_classes)
     
-    # Draw zones on the crop 
+    # Draw zones on the crop (Semi-transparent overlay)
     overlay = crop.copy()
     for z in zones.values():
         cv2.fillPoly(overlay, [z["points"]], z["color"])
@@ -113,7 +130,7 @@ while True:
         for box in results[0].boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
             
-            # Bottom center of the car 
+            # Bottom center of the car (where the tires touch the road)
             car_bottom_x = int((x1 + x2) / 2)
             car_bottom_y = y2
             
@@ -128,12 +145,13 @@ while True:
             elif closest_status not in [zones["RED"]["message"], zones["YELLOW"]["message"]] and cv2.pointPolygonTest(zones["GREEN"]["points"], (car_bottom_x, car_bottom_y), False) >= 0:
                 closest_status = zones["GREEN"]["message"]
 
+    # --- SEND THE DATA TO PI ---
     try:
-        sock.sendto(closest_status.encode(), (PI_IP, PI_PORT))
+        sock.sendto(closest_status.encode(), (PI_IP, PI_PORT_UDP))
     except Exception as e:
         print(f"Network error: {e}")
     
-    
+    # Display the result
     cv2.putText(crop, f"STATUS: {closest_status}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
     cv2.putText(crop, f"STATUS: {closest_status}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
     
@@ -141,5 +159,4 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'): 
         break
 
-cap.release()
 cv2.destroyAllWindows()
