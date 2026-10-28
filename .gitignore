@@ -33,6 +33,8 @@ Thumbs.db
 
 processing/benchmark.py
 processing/test.py
+processing/benchmark.py
+processing/test.py
 processing/app.py
 processing/templates
 processing/video.py
@@ -40,3 +42,11 @@ processing/calibrate_lane.py
 processing/single_lane.py
 processing/distance_test.py
 processing/videos
+processing/web_app.py
+processing/mac_bridge.py
+processing/web_detector.py
+safestride-app/.gradle/
+
+# --- Local secrets & machine config ---
+wearable_nano33/include/secrets.h
+safestride-app/local.properties

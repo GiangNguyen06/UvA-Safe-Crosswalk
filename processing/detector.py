@@ -38,10 +38,7 @@ class CrosswalkDetector:
             conf=0.5, 
             classes=self.target_classes
         )
-        
-        # We use 'masks=True' to show the colored shapes.
-        # 'boxes=False' to hide the rectangles.
-        # Note: If 'alpha' fails, the default transparency is usually fine.
+       
         annotated_frame = results[0].plot(
             boxes=False, 
             masks=True, 
@@ -49,8 +46,6 @@ class CrosswalkDetector:
             conf=True
         )
         
-        # Safety check: if no objects are detected, plot() might return None or 
-        # a blank result in rare edge cases. Let's ensure we return the frame.
         if annotated_frame is None:
             return frame
             
