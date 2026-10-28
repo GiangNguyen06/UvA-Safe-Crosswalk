@@ -4,15 +4,15 @@ import socket
 LISTEN_IP = "0.0.0.0"  
 LISTEN_PORT = 9001 
 
-# 2. Blast to the Watch (Phone Hotspot) on Port 9000
+# 2. Send to the Watch (Phone Hotspot) on Port 9000
 WATCH_PORT = 9000
-BROADCAST_IP = "255.255.255.255" #double check with watches ip config on hotspot network!
+BROADCAST_IP = "172.20.10.3" #double check with watches ip config on hotspot network!
 
 receiver_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 receiver_sock.bind((LISTEN_IP, LISTEN_PORT))
 
 sender_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# THE MAGIC LINE: Enable shouting to the whole hotspot network
+# Enable shouting to the whole hotspot network
 sender_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1) 
 
 print(f"[PI RELAY] Field Test Mode Active!")

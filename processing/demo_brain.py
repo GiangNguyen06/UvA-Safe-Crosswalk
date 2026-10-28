@@ -14,10 +14,8 @@ ROI_X1, ROI_X2 = 1, 648
 
 # UDP Setup 
 PI_IP = "100.119.133.35" 
-PI_PORT = 9000
+PI_PORT = 9001
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-# Zone Storage - ORDERED FROM FURTHEST TO CLOSEST
 zones = {
     "RED": {
         "points": [], 

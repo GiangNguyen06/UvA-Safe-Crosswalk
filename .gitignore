@@ -46,3 +46,7 @@ processing/web_app.py
 processing/mac_bridge.py
 processing/web_detector.py
 safestride-app/.gradle/
+
+# --- Local secrets & machine config ---
+wearable_nano33/include/secrets.h
+safestride-app/local.properties
