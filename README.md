@@ -8,6 +8,8 @@ At crossings without traffic lights, visually impaired pedestrians cannot see wh
 
 Built at the University of Amsterdam (2026) and field-tested at a real street crossing in Amsterdam.
 
+**Demo video:** [watch SafeStride in action on YouTube](https://www.youtube.com/watch?v=aEHTeOglvig)
+
 <br clear="right"/>
 
 ## How it works
